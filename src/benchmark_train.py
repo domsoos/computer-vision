@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from cnn import CNN
+from fd2nn import FD2NN
 
 def get_loaders(H=64, W=64, dataset='fashion', bs=256, aug=True):
     tfms = [transforms.Resize((H,W))]
@@ -44,7 +45,7 @@ def evaluate(model, loader, device):
 def train_model(name, model, train_loader, val_loader, device, epochs=10, lr=3e-3):
     model.to(device)
     opt = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    scaler = GradScaler(enabled=(device=='cuda'))
+    scaler = GradScaler('cuda', enabled=(device=='cuda'))
     crit = nn.CrossEntropyLoss()
 
     epoch_times = []
@@ -92,10 +93,13 @@ def main():
     train_loader, val_loader, C = get_loaders(H, W, dataset='mnist', bs=256, aug=True)
 
     # CNN baseline
-    model = CNN(in_ch=1, classes=C)
+    cnn = CNN(in_ch=1, classes=C)
+    fd2nn = FD2NN(in_ch=1, img_size=64, n_layers=4, hidden_channels=16, classes=10)
 
     results = {}
-    train_model("CNN", model, train_loader, val_loader, device, epochs=12, lr=3e-3)
+    for name, model, ep in [("CNN",cnn,12),("FD2NN",fd2nn,12)]:
+        results[name] = train_model(name, model, train_loader, val_loader, device, epochs=ep, lr=3e-3)
+
     print("\n==== Summary ====")
     for k,v in results.items():
         print(f"{k:>14} | acc {v['best_val_acc']:.3f} | epoch {v['mean_epoch_time_s']:.1f}s | infer {v['inference_imgs_per_s']:.0f} img/s")
