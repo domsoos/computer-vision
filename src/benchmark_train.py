@@ -1,7 +1,7 @@
 # benchmark_train.py
 import time
 import torch, torch.nn as nn, torch.optim as optim
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
@@ -24,8 +24,8 @@ def get_loaders(H=64, W=64, dataset='fashion', bs=256, aug=True):
         C = 10
     else:
         raise ValueError
-    train_loader = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader  = DataLoader(testset,  batch_size=bs, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=1, pin_memory=True)
+    test_loader  = DataLoader(testset,  batch_size=bs, shuffle=False, num_workers=1, pin_memory=True)
     return train_loader, test_loader, C
 
 @torch.no_grad()
@@ -57,7 +57,7 @@ def train_model(name, model, train_loader, val_loader, device, epochs=10, lr=3e-
         for x,y in train_loader:
             x,y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             opt.zero_grad(set_to_none=True)
-            with autocast(dtype=torch.float16, enabled=(device=='cuda')):
+            with autocast(device_type='cuda', dtype=torch.float16, enabled=(device=='cuda')):
                 logits = model(x)
                 loss = crit(logits, y)
             scaler.scale(loss).backward()
