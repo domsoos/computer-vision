@@ -1,0 +1,108 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+
+% Robust image loading command to prevent crashes if images are missing
+\newcommand{\robustincludegraphics}[2][]{%
+  \IfFileExists{#2}{%
+    \includegraphics[#1]{#2}%
+  }{%
+    \fbox{\parbox[c][3cm][c]{0.8\linewidth}{\centering Image file not found:\\ \texttt{#2}}}%
+  }%
+}
+
+\title{\textbf{Efficient Training of Optical Neural Networks: \\ Fourier-Space vs. Real-Space Architectures}}
+\author{Dominik Soós \and Chris Maguschak}
+\date{November 2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Optical computing promises high-throughput, low-energy inference by leveraging the speed of light for matrix multiplications. However, training these diffractive networks in simulation is notoriously unstable. In this work, we compare Real-space Diffractive Deep Neural Networks ($D^2NN$) against Fourier-space architectures ($F-D^2NN$) on the Fashion-MNIST dataset. We demonstrate that a \textbf{Hybrid Optical-Digital} architecture outperforms a standard CNN baseline (87.2\% vs 83.8\%) by offloading feature extraction to a diffractive front-end. We also present a robust training recipe that mitigates the "curriculum mismatch" problem, stabilizing pure optical models.
+\end{abstract}
+
+\section{Introduction}
+As Moore's Law slows, optical computing offers a paradigm shift for deep learning hardware. By encoding information into the phase and amplitude of light, we can perform complex linear transformations (convolutions and Fourier transforms) physically. This project explores the simulation and training dynamics of such systems, specifically comparing localized diffraction ($D^2NN$) with global frequency-domain modulation ($F-D^2NN$).
+
+\section{Methods}
+
+\subsection{Architectures}
+We implemented four distinct architectures in PyTorch:
+\begin{itemize}
+    \item \textbf{CNN Baseline:} A VGG-style electronic network with $\sim$16k parameters.
+    \item \textbf{D2NN (Real-Space):} A stack of diffractive layers modeled using Fresnel propagation. We enable an "optical ReLU" (intensity detection) to introduce nonlinearity.
+    \item \textbf{FD2NN (Fourier-Space):} A frequency-domain architecture that modulates the spectrum of the image directly using FFT/iFFT operations.
+    \item \textbf{Hybrid Model:} A learned FD2NN front-end feeding a lightweight digital CNN.
+\end{itemize}
+
+\subsection{The "Curriculum" Trap}
+A critical finding during our experiments was the impact of curriculum learning. Initially, training with a low-pass filter curriculum caused optical models to fail (accuracy $<16\%$) because the diffractive layers optimized for blurry inputs could not focus sharp test images. Disabling the curriculum for the digital back-end was essential for convergence.
+
+\section{Results}
+
+\subsection{Performance Benchmark}
+We evaluated all models on Fashion-MNIST. The Hybrid model demonstrated superior performance, effectively utilizing the optical layers for feature extraction.
+
+\begin{table}[h]
+    \centering
+    \caption{Final Test Accuracy and Inference Speed (Simulation)}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Model} & \textbf{Test Accuracy} & \textbf{Speed (img/s)} & \textbf{Params (Digital)} \\
+        \midrule
+        CNN Baseline & 83.8\% & 6459 & 16,698 \\
+        FD2NN (Opt) & 82.2\% & 6409 & 529,034* \\
+        D2NN (NonLin) & 73.0\% & 6471 & 263,434* \\
+        \textbf{Hybrid (Ours)} & \textbf{87.2\%} & 6432 & 16,698 \\
+        \bottomrule
+    \end{tabular}
+    \\[5pt]
+    \small{*Parameter counts include passive optical elements which consume zero power during physical inference.}
+\end{table}
+
+\subsection{Training Dynamics}
+Figure \ref{fig:curves} illustrates the training stability. While the D2NN (green) struggles to capture high-frequency details initially, the Hybrid model (orange) converges rapidly, overtaking the CNN baseline.
+
+\begin{figure}[H]
+    \centering
+    \robustincludegraphics[width=0.95\textwidth]{benchmark_curves.png}
+    \caption{Validation Accuracy and Loss across training epochs. The Hybrid model shows the fastest convergence and highest peak accuracy.}
+    \label{fig:curves}
+\end{figure}
+
+\subsection{Confusion Analysis}
+The confusion matrices (Figure \ref{fig:conf}) reveal that the Hybrid model significantly reduces misclassifications between "Shirt" and "T-shirt" compared to the pure optical models, suggesting the digital back-end refines the optical features effectively.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \robustincludegraphics[width=\textwidth]{CNN_Baseline_confusion.png}
+        \caption{CNN Baseline}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \robustincludegraphics[width=\textwidth]{Hybrid_confusion.png}
+        \caption{Hybrid Model}
+    \end{subfigure}
+    \caption{Confusion Matrices on Fashion-MNIST test set.}
+    \label{fig:conf}
+\end{figure}
+
+\section{Ablation Study: Learned vs. Frozen Optics}
+To verify the optical layers are learning useful physics, we compared the standard Hybrid model against one with a fixed, random optical front-end. The learned optics provided a $+12\%$ accuracy boost over the random projection, confirming that the phase masks are actively performing feature extraction (e.g., edge detection).
+
+\section{Conclusion}
+Our simulation framework proves that hybrid optical-electronic systems can surpass purely electronic baselines of similar digital complexity. By fixing the training curriculum and introducing nonlinearities in the optical path, we achieved robust convergence across all architectures.
+
+\end{document}

@@ -1,0 +1,106 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usecolortheme{dolphin}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption}
+
+\graphicspath{{../plots/}}
+
+\newcommand{\robustincludegraphics}[2][]{%
+  \IfFileExists{../plots/#2}{%
+    \includegraphics[#1]{#2}%
+  }{%
+    \centering\fbox{\parbox[c][2cm][c]{0.8\linewidth}{\centering \tiny \textbf{Missing:} #2}}%
+  }%
+}
+
+\title{Efficient Training of Optical Neural Networks}
+\subtitle{Fourier-Space vs. Real-Space Simulation}
+\author{Dominik Soós \and Chris Maguschak}
+\institute{Computer Vision Research}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Motivation & Goals}
+    \begin{itemize}
+        \item \textbf{Problem:} AI hardware power consumption is skyrocketing.
+        \item \textbf{Solution:} Passive Optical Computing (Speed of light, Zero energy).
+        \item \textbf{Challenge:} "Curriculum Mismatch" causes training instability.
+        \item \textbf{Result:} A \textbf{Hybrid Architecture} that beats the CNN baseline.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Learned Phase Masks}
+    What does the FD2NN learn? (Complex Lenses)
+    \begin{figure}
+        \centering
+        \robustincludegraphics[width=0.9\textwidth]{presentation_phase_masks.png}
+        \caption{Learned phase delays in the Fourier plane.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Benchmark Results}
+    \begin{table}
+        \centering
+        \begin{tabular}{l c c}
+            \toprule
+            \textbf{Model} & \textbf{Accuracy} & \textbf{Speed (Sim)} \\
+            \midrule
+            CNN Baseline & 83.8\% & 6459 img/s \\
+            FD2NN (Optical) & 82.2\% & 6409 img/s \\
+            D2NN (NonLin) & 73.0\% & 6471 img/s \\
+            \textbf{Hybrid (Ours)} & \textbf{87.2\%} & \textbf{6432 img/s} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    \vspace{0.5cm}
+    \centering \textbf{Hybrid outperforms purely digital CNNs!}
+\end{frame}
+
+\begin{frame}{Training Dynamics}
+    \begin{figure}
+        \centering
+        \robustincludegraphics[width=0.85\textwidth]{benchmark_curves.png}
+        \caption{Validation Accuracy vs Epochs.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Confusion Analysis}
+    \begin{figure}
+        \centering
+        \begin{subfigure}{0.48\textwidth}
+            \robustincludegraphics[width=\linewidth]{CNN_Baseline_confusion.png}
+            \caption{CNN Baseline}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}{0.48\textwidth}
+            \robustincludegraphics[width=\linewidth]{Hybrid_confusion.png}
+            \caption{Hybrid (Ours)}
+        \end{subfigure}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Optical Feature Extraction}
+    The optical front-end acts as an edge-detector for the CNN:
+    \begin{figure}
+        \centering
+        \robustincludegraphics[width=\textwidth]{hybrid_features.png}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Sample Predictions}
+    \begin{figure}
+        \centering
+        \robustincludegraphics[width=0.9\textwidth]{Hybrid_samples.png}
+        \caption{Qualitative results on Fashion-MNIST.}
+    \end{figure}
+\end{frame}
+
+\end{document}
