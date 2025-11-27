@@ -45,7 +45,7 @@ def main():
     hybrid_fz = HybridFD2NN_CNN(img_size=32, classes=C, fd_channels=32, cnn_channels=(16,32), freeze_frontend=True)
 
     runs = {
-        "CNN_Baseline": (cnn, dict(epochs=20, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "CNN_Baseline": (cnn, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
         "FD2NN_Opt":    (fd2nn, dict(epochs=25, base_lr=1e-3, weight_decay=1e-3, curriculum=False, tv_max=1e-4)),
         
         # Experiment D: Nonlinear vs Linear D2NN
@@ -53,8 +53,8 @@ def main():
         "D2NN_Linear":  (d2nn_lin, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
 
         # Experiment A: Learned vs Frozen Hybrid
-        "Hybrid":       (hybrid, dict(epochs=20, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "Hybrid_Frozen":(hybrid_fz, dict(epochs=20, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "Hybrid":       (hybrid, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "Hybrid_Frozen":(hybrid_fz, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
     }
 
     results = {}
