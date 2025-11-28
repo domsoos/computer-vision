@@ -14,6 +14,14 @@ from fd2nn import FD2NN
 from d2nn import D2NN
 from hybrid import HybridFD2NN_CNN
 
+def get_test_loader():
+    MEAN, STD = (0.2860,), (0.3530,)
+    tfms = transforms.Compose([
+        transforms.Pad(2), transforms.ToTensor(), transforms.Normalize(MEAN, STD)
+    ])
+    dset = datasets.FashionMNIST('./data', train=False, download=True, transform=tfms)
+    return DataLoader(dset, batch_size=256, shuffle=False), dset.classes
+
 def load_model(model_name, device):
     C = 10
     # Match the definitions in benchmark_train.py EXACTLY
@@ -82,9 +90,59 @@ def plot_training_curves(model_names):
 
 def analyze_model(model_name):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"Analyzing {model_name}...")
+    
     model = load_model(model_name, device)
     if model is None: return
-    print(f"Generated confusion/samples for {model_name}")
+
+    loader, class_names = get_test_loader()
+    all_preds, all_targs, images = [], [], []
+
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            logits = model(x)
+            preds = logits.argmax(1).cpu()
+            all_preds.extend(preds.numpy())
+            all_targs.extend(y.numpy())
+            if len(images) == 0: images = x.cpu() # Save first batch
+
+    # 1. Confusion Matrix
+    cm = confusion_matrix(all_targs, all_preds)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.title(f"Confusion Matrix: {model_name}")
+    plt.ylabel('True')
+    plt.xlabel('Pred')
+    plt.tight_layout()
+    plt.savefig(f"{model_name}_confusion.png")
+    plt.close()
+
+    # 2. Sample Predictions
+    all_preds = np.array(all_preds)
+    all_targs = np.array(all_targs)
+    
+    indices = np.random.choice(len(images), 10, replace=False)
+    
+    fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+    for i, idx in enumerate(indices):
+        ax = axes[i//5, i%5]
+        img = images[idx].squeeze()
+        img = img * 0.3530 + 0.2860 # Un-normalize
+        ax.imshow(img, cmap='gray')
+        
+        pred = class_names[all_preds[idx]]
+        true = class_names[all_targs[idx]]
+        col = 'green' if pred == true else 'red'
+        
+        ax.set_title(f"P:{pred}\nT:{true}", color=col)
+        ax.axis('off')
+        
+    plt.suptitle(f"{model_name} Random Samples")
+    plt.tight_layout()
+    plt.savefig(f"{model_name}_samples.png")
+    plt.close()
+    print(f"Saved plots for {model_name}")
 
 if __name__ == "__main__":
     models = ["CNN_Baseline", "Hybrid", "Hybrid_Frozen", "FD2NN_Opt", "D2NN_NonLin", "D2NN_Linear"]
