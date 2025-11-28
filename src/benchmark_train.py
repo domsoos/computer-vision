@@ -12,18 +12,37 @@ from d2nn import D2NN
 from hybrid import HybridFD2NN_CNN
 
 def get_loaders(dataset='fashion', bs=128):
-    MEAN, STD = (0.2860,), (0.3530,)
     root = './data'
-    train_tfms = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
+    
+    if dataset == 'fashion':
+        MEAN, STD = (0.2860,), (0.3530,)
+        DataClass = datasets.FashionMNIST
+        aug_list = [transforms.RandomHorizontalFlip()] 
+    elif dataset == 'mnist':
+        MEAN, STD = (0.1307,), (0.3081,)
+        DataClass = datasets.MNIST
+        aug_list = [] 
+    else:
+        raise ValueError(f"Unknown dataset: {dataset}")
+
+    aug_list.extend([
         transforms.RandomAffine(degrees=10, translate=(0.1, 0.1)),
-        transforms.Pad(2), transforms.ToTensor(), transforms.Normalize(MEAN, STD)
+        transforms.Pad(2),
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD)
     ])
+
+    train_tfms = transforms.Compose(aug_list)
+    
     test_tfms = transforms.Compose([
-        transforms.Pad(2), transforms.ToTensor(), transforms.Normalize(MEAN, STD)
+        transforms.Pad(2),
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD)
     ])
-    trainset = datasets.FashionMNIST(root, train=True, download=True, transform=train_tfms)
-    testset = datasets.FashionMNIST(root, train=False, download=True, transform=test_tfms)
+
+    trainset = DataClass(root, train=True, download=True, transform=train_tfms)
+    testset = DataClass(root, train=False, download=True, transform=test_tfms)
+    
     return (DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=2),
             DataLoader(testset, batch_size=bs, shuffle=False, num_workers=2),
             10)
@@ -31,7 +50,8 @@ def get_loaders(dataset='fashion', bs=128):
 def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Benchmarking on {device}...")
-    train_loader, val_loader, C = get_loaders()
+    train_loader, val_loader, C = get_loaders(dataset='mnist')
+    epochs = 20
 
     cnn     = CNN(in_ch=1, classes=C, channels=(16, 32)) # Reverted to match checkpoints
     fd2nn   = FD2NN(in_ch=1, img_size=32, n_layers=4, hidden_channels=32, classes=C, dropout=0.1)
@@ -45,16 +65,16 @@ def main():
     hybrid_fz = HybridFD2NN_CNN(img_size=32, classes=C, fd_channels=32, cnn_channels=(16,32), freeze_frontend=True)
 
     runs = {
-        "CNN_Baseline": (cnn, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "FD2NN_Opt":    (fd2nn, dict(epochs=25, base_lr=1e-3, weight_decay=1e-3, curriculum=False, tv_max=1e-4)),
+        "CNN_Baseline": (cnn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "FD2NN_Opt":    (fd2nn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-3, curriculum=False, tv_max=1e-4)),
         
         # Experiment D: Nonlinear vs Linear D2NN
-        "D2NN_NonLin":  (d2nn_nl, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "D2NN_Linear":  (d2nn_lin, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "D2NN_NonLin":  (d2nn_nl, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "D2NN_Linear":  (d2nn_lin, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
 
         # Experiment A: Learned vs Frozen Hybrid
-        "Hybrid":       (hybrid, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "Hybrid_Frozen":(hybrid_fz, dict(epochs=25, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "Hybrid":       (hybrid, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "Hybrid_Frozen":(hybrid_fz, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
     }
 
     results = {}
