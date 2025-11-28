@@ -11,7 +11,7 @@ from hybrid import HybridFD2NN_CNN
 def get_model_and_masks(model_name, device='cpu'):
     """Instantiates the correct model and returns the list of phase mask tensors."""
     C = 10
-    path = f"../checkpoints/{model_name}.pth"
+    path = f"./checkpoints/{model_name}.pth"
     
     if not os.path.exists(path):
         print(f"Skipping {model_name}: {path} not found.")
@@ -50,10 +50,10 @@ def get_model_and_masks(model_name, device='cpu'):
 def visualize_all_masks():
     """Generates heatmaps for all models with phase masks."""
     # The list of models we want to visualize
-    target_models = ["FD2NN_Opt", "D2NN_NonLin", "Hybrid"]
+    target_models = ["FD2NN_Opt", "D2NN_NonLin","D2NN_Linear","Hybrid", "Hybrid_Frozen"]
     
     # Ensure plots directory exists
-    os.makedirs("../plots", exist_ok=True)
+    os.makedirs("./plots", exist_ok=True)
 
     for name in target_models:
         model, masks = get_model_and_masks(name)
