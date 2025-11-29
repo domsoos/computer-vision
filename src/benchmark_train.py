@@ -52,6 +52,7 @@ def main():
     print(f"Benchmarking on {device}...")
     train_loader, val_loader, C = get_loaders(dataset='mnist')
     epochs = 20
+    curriculum = True
 
     cnn     = CNN(in_ch=1, classes=C, channels=(16, 32)) # Reverted to match checkpoints
     fd2nn   = FD2NN(in_ch=1, img_size=32, n_layers=4, hidden_channels=32, classes=C, dropout=0.1)
@@ -65,16 +66,16 @@ def main():
     hybrid_fz = HybridFD2NN_CNN(img_size=32, classes=C, fd_channels=32, cnn_channels=(16,32), freeze_frontend=True)
 
     runs = {
-        "CNN_Baseline": (cnn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "FD2NN_Opt":    (fd2nn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-3, curriculum=False, tv_max=1e-4)),
+        "CNN_Baseline": (cnn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
+        "FD2NN_Opt":    (fd2nn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-3, curriculum=curriculum, tv_max=1e-4)),
         
         # Experiment D: Nonlinear vs Linear D2NN
-        "D2NN_NonLin":  (d2nn_nl, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "D2NN_Linear":  (d2nn_lin, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "D2NN_NonLin":  (d2nn_nl, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
+        "D2NN_Linear":  (d2nn_lin, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
 
         # Experiment A: Learned vs Frozen Hybrid
-        "Hybrid":       (hybrid, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
-        "Hybrid_Frozen":(hybrid_fz, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=False)),
+        "Hybrid":       (hybrid, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
+        "Hybrid_Frozen":(hybrid_fz, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
     }
 
     results = {}
