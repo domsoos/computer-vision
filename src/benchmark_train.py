@@ -10,6 +10,7 @@ from cnn import CNN
 from fd2nn import FD2NN
 from d2nn import D2NN
 from hybrid import HybridFD2NN_CNN
+from frankenstein import Frankenstein
 
 def get_loaders(dataset='fashion', bs=128):
     root = './data'
@@ -65,6 +66,8 @@ def main():
     hybrid  = HybridFD2NN_CNN(img_size=32, classes=C, fd_channels=32, cnn_channels=(16,32))
     hybrid_fz = HybridFD2NN_CNN(img_size=32, classes=C, fd_channels=32, cnn_channels=(16,32), freeze_frontend=True)
 
+    franken = Frankenstein(in_ch=1, img_size=32, n_layers=4, hidden_channels=32, classes=C, dropout=0.1)
+
     runs = {
         "CNN_Baseline": (cnn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
         "FD2NN_Opt":    (fd2nn, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-3, curriculum=curriculum, tv_max=1e-4)),
@@ -76,6 +79,9 @@ def main():
         # Experiment A: Learned vs Frozen Hybrid
         "Hybrid":       (hybrid, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
         "Hybrid_Frozen":(hybrid_fz, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum)),
+
+        #Experiment E: Frankenstein
+        "Frankenstein":  (franken, dict(epochs=epochs, base_lr=1e-3, weight_decay=1e-4, curriculum=curriculum, tv_max=1e-4))
     }
 
     results = {}
