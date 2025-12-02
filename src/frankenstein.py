@@ -16,7 +16,7 @@ class Frankenstein(nn.Module):
         self.n_layers = n_layers
         self.hidden_channels = hidden_channels
 
-        # True complex-valued 3x3 convolutions
+        # complex-valued 3x3 convolutions
         self.complex_weights = nn.ParameterList([
             nn.Parameter(torch.randn(hidden_channels, hidden_channels, 3, 3, dtype=torch.complex64) * 0.02)
             for _ in range(n_layers)
