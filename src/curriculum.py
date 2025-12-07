@@ -16,7 +16,7 @@ def _freq_radial_mask(H, W, cutoff_frac, device):
     yy, xx = torch.meshgrid(fy, fx, indexing="ij")
     r = torch.sqrt(xx * xx + yy * yy)               # radius in frequency plane
 
-    # 🔧 KEY FIX: normalize by **max radius**, not per-axis max
+    # KEY FIX: normalize by **max radius**, not per-axis max
     r = r / (r.max() + 1e-8)                        # now r ∈ [0, 1]
 
     # Clamp cutoff_frac and build smooth Hann-ish rolloff
