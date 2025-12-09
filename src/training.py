@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.amp import autocast, GradScaler
-from curriculum import lowpass_inputs
+from curriculum import lowpass_inputs, bandwidth_schedule
 from regularizers import total_variation_phase, amplitude_l2
 
 def train_model(name, model, train_loader, val_loader, device,
@@ -35,13 +35,17 @@ def train_model(name, model, train_loader, val_loader, device,
         start = time.perf_counter()
         total=correct=0; loss_sum=0.0
 
-        cutoff = 0.25 + 0.75 * (ep / max(1, epochs-1))**1.5
-        w_tv  = tv_max   * (1.0 - ep / max(1, epochs-1))
-        w_amp = amp_l2_max * (1.0 - ep / max(1, epochs-1))
+        cutoff = bandwidth_schedule(ep, epochs,min_cutoff=0.35,max_cutoff=1.0,gamma=1.5)
+        progress = ep / max(1, epochs - 1)
+        w_tv  = tv_max   * (1.0 - progress)
+        w_amp = amp_l2_max * (1.0 - progress)
 
         for x,y in train_loader:
             x,y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            if curriculum: x = lowpass_inputs(x, cutoff)
+            if curriculum:
+                x_blur = lowpass_inputs(x, cutoff)
+                mix = progress**2                 # early: mostly blur, late: mostly sharp
+                x = mix * x + (1.0 - mix) * x_blur
 
             opt.zero_grad(set_to_none=True)
             with autocast(device_type='cuda', enabled=(use_amp and torch.cuda.is_available())):
@@ -67,7 +71,7 @@ def train_model(name, model, train_loader, val_loader, device,
         if not cosine_per_batch: sched.step()
 
         # Validation
-        val_loss, val_acc = evaluate(model, val_loader, device)
+        val_loss, val_acc = evaluate(model, val_loader, device,curriculum,cutoff)
         train_acc = correct/total
         train_loss = loss_sum/total
         
@@ -97,12 +101,14 @@ def train_model(name, model, train_loader, val_loader, device,
     }
 
 @torch.no_grad()
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, curriculum=False, cutoff=None):
     model.eval()
     crit = nn.CrossEntropyLoss()
     total, correct, loss_sum = 0, 0, 0.0
     for x,y in loader:
         x,y = x.to(device), y.to(device)
+        if curriculum and cutoff is not None:
+            x = lowpass_inputs(x, cutoff)
         logits = model(x)
         loss_sum += crit(logits, y).item() * x.size(0)
         correct += (logits.argmax(1) == y).sum().item()
